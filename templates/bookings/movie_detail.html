@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ movie.title }} Tickets & Showtimes | CineBook{% endblock %}
+{% block meta_description %}Book tickets for {{ movie.title }} ({{ movie.language }}) in {{ selected_city }}. Check showtimes, formats, and theatre availability on CineBook.{% endblock %}
+
+{% block content %}
+<!-- Movie Hero Backdrop & Details -->
+<section class="movie-hero-backdrop" style="{% if movie.banner_url %}background-image: url('{{ movie.banner_url }}');{% endif %}">
+  <div class="container">
+    <div class="movie-detail-grid">
+      
+      <!-- Poster -->
+      <div class="movie-detail-poster">
+        {% if movie.poster_url %}
+          <img src="{{ movie.poster_url }}" alt="{{ movie.title }} Poster">
+        {% else %}
+          <div style="width:100%;height:100%;background:#181b28;display:flex;align-items:center;justify-content:center;color:#6b7280;">
+            No Poster Available
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Information -->
+      <div class="movie-detail-info">
+        <div class="meta-tags">
+          <span class="badge badge-red">NOW SHOWING</span>
+          <span class="badge badge-outline">{{ movie.certificate }}</span>
+          <span class="badge badge-format">{{ movie.duration_formatted }}</span>
+          <span class="badge badge-outline">{{ movie.language }}</span>
+        </div>
+
+        <h1>{{ movie.title }}</h1>
+
+        <!-- Rating Box -->
+        <div class="rating-box">
+          <div class="rating-star-group">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fbbf24">
+              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+            </svg>
+            <span>{{ movie.rating }} <span style="font-size: 0.95rem; color: var(--text-dim); font-weight: normal;">/ 10</span></span>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); border-left: 1px solid var(--border-color); padding-left: 1.25rem;">
+            <strong>{{ movie.votes_count|default:"10k+" }}</strong> verified votes
+          </div>
+        </div>
+
+        <!-- Synopsis -->
+        <div class="synopsis-block">
+          <h3>Synopsis</h3>
+          <p>{{ movie.description }}</p>
+        </div>
+
+        <!-- Cast & Crew -->
+        <div class="crew-grid">
+          <div class="crew-item">
+            <span>Director</span>
+            <strong>{{ movie.director }}</strong>
+          </div>
+          <div class="crew-item">
+            <span>Starring</span>
+            <strong>{{ movie.cast }}</strong>
+          </div>
+          <div class="crew-item">
+            <span>Genres</span>
+            <strong>{{ movie.genres }}</strong>
+          </div>
+          <div class="crew-item">
+            <span>Release Date</span>
+            <strong>{{ movie.release_date|date:"M d, Y" }}</strong>
+          </div>
+        </div>
+
+        <!-- Trailer Button -->
+        {% if movie.trailer_youtube_id %}
+          <button type="button" class="btn btn-secondary" data-trailer-id="{{ movie.trailer_youtube_id }}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            Watch Trailer
+          </button>
+        {% endif %}
+
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Showtimes Section -->
+<div class="container" style="padding-top: 2rem; padding-bottom: 4rem;">
+  
+  <div class="section-header" style="margin-bottom: 0.5rem;">
+    <div>
+      <h2 class="section-title">Select Show Date & Time</h2>
+      <p style="font-size: 0.88rem; color: var(--text-dim); margin-top: 0.2rem;">
+        Showing cinemas in <strong style="color: #fff;">{{ selected_city }}</strong>
+      </p>
+    </div>
+  </div>
+
+  <!-- Date Selector Bar -->
+  <div class="date-selector-bar">
+    {% for opt in date_options %}
+      <a href="?date={{ opt.date_str }}" class="date-pill {% if opt.is_selected %}active{% endif %}">
+        <span class="day-name">{{ opt.day_name }}</span>
+        <span class="day-date">{{ opt.display_str }}</span>
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- Theatres & Shows List -->
+  {% if theatre_shows %}
+    {% for theatre, shows in theatre_shows.items %}
+      <div class="theatre-card" id="theatre-{{ theatre.id }}">
+        
+        <div class="theatre-card-header">
+          <div>
+            <h3 class="theatre-title">{{ theatre.name }}</h3>
+            <p class="theatre-address">{{ theatre.address }}</p>
+            <div class="theatre-facilities">
+              {% for f in theatre.facility_list %}
+                <span class="badge badge-outline" style="font-size: 0.68rem;">{{ f }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Shows Grid -->
+        <div class="showtimes-grid">
+          {% for show in shows %}
+            <a href="{% url 'seat_selection' show_id=show.id %}" class="showtime-btn" title="{{ show.screen.name }} - Std: ₹{{ show.price_standard }} / Prm: ₹{{ show.price_premium }} / VIP: ₹{{ show.price_vip }}">
+              <span class="show-time">{{ show.start_time|time:"h:i A" }}</span>
+              <span class="show-format">{{ show.format }}</span>
+              <span class="show-price">₹{{ show.price_standard|floatformat:0 }} onwards</span>
+              <span class="show-status">
+                {% if show.available_seats_count < 15 %}
+                  <span style="color: #f59e0b;">Filling Fast ({{ show.available_seats_count }} left)</span>
+                {% else %}
+                  <span>Available</span>
+                {% endif %}
+              </span>
+            </a>
+          {% endfor %}
+        </div>
+
+      </div>
+    {% endfor %}
+  {% else %}
+    <div style="background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-color); padding: 3rem 2rem; text-align: center; margin-top: 1rem;">
+      <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem;">No Shows Scheduled for This Date</h3>
+      <p style="color: var(--text-dim); margin-bottom: 1.5rem;">
+        There are currently no showtimes scheduled for {{ selected_date|date:"l, M d, Y" }} in {{ selected_city }}. Please check another date or city.
+      </p>
+      <a href="?date={{ date_options.0.date_str }}" class="btn btn-primary">
+        Check Today's Shows
+      </a>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

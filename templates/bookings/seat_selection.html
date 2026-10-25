@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Select Seats | {{ show.movie.title }} | CineBook{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <!-- Header Breadcrumb & Info -->
+  <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 0 0.5rem 0; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <a href="{% url 'movie_detail' slug=show.movie.slug %}" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.4rem;">
+        &larr; Back to {{ show.movie.title }}
+      </a>
+      <h1 style="font-size: 1.6rem;">
+        {{ show.movie.title }} 
+        <span class="badge badge-format" style="vertical-align: middle; margin-left: 0.5rem;">{{ show.format }}</span>
+        <span class="badge badge-outline" style="vertical-align: middle;">{{ show.language }}</span>
+      </h1>
+      <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.2rem;">
+        <strong>{{ show.screen.theatre.name }}</strong> ({{ show.screen.name }}) • 
+        {{ show.date|date:"D, M d, Y" }} at <strong style="color: #fff;">{{ show.start_time|time:"h:i A" }}</strong>
+      </p>
+    </div>
+
+    <!-- Hidden config helper for JS -->
+    <div id="bookingConfig" data-convenience-fee="{{ convenience_fee_per_ticket }}" style="display:none;"></div>
+  </div>
+
+  <!-- Seat Booking Layout -->
+  <div class="seat-booking-layout">
+    
+    <!-- Cinema Screen & Seats Matrix -->
+    <div class="screen-container">
+      
+      <!-- Screen Glow Indicator -->
+      <div class="screen-indicator-wrap">
+        <div class="screen-curve"></div>
+        <span class="screen-label">CINEMA SCREEN • ALL EYES THIS WAY</span>
+      </div>
+
+      <!-- Legend -->
+      <div class="seats-legend">
+        <div class="legend-item">
+          <div class="seat-box available" style="cursor: default; width: 22px; height: 20px;"></div>
+          <span>Available</span>
+        </div>
+        <div class="legend-item">
+          <div class="seat-box selected" style="cursor: default; width: 22px; height: 20px;">✓</div>
+          <span>Selected</span>
+        </div>
+        <div class="legend-item">
+          <div class="seat-box booked" style="cursor: default; width: 22px; height: 20px;">✕</div>
+          <span>Sold / Booked</span>
+        </div>
+      </div>
+
+      <!-- Seat Sections -->
+      <div class="seats-grid">
+        {% for tier_key, section in sections.items %}
+          <div class="seat-section-title">
+            {{ section.name }} — ₹{{ section.price|floatformat:0 }}
+          </div>
+
+          {% for row in section.rows %}
+            <div class="seat-row">
+              <span class="row-label">{{ row.row_letter }}</span>
+              <div class="seats-row-group">
+                {% for seat in row.seats %}
+                  {% if seat.is_booked %}
+                    <div class="seat-box booked" 
+                         title="{{ seat.code }} (Sold Out)" 
+                         aria-disabled="true">
+                      {{ seat.number }}
+                    </div>
+                  {% else %}
+                    <button type="button" 
+                            class="seat-box available" 
+                            id="seat-btn-{{ seat.id }}"
+                            data-seat-id="{{ seat.id }}"
+                            data-seat-code="{{ seat.code }}"
+                            data-seat-tier="{{ seat.tier }}"
+                            data-seat-price="{{ seat.price }}"
+                            title="{{ seat.code }} - ₹{{ seat.price|floatformat:0 }} ({{ section.name }})"
+                            aria-label="Seat {{ seat.code }}">
+                      {{ seat.number }}
+                    </button>
+                  {% endif %}
+                  
+                  {# Add an aisle gap in the middle after seat 6 #}
+                  {% if seat.number == 6 %}
+                    <div style="width: 20px;"></div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+              <span class="row-label">{{ row.row_letter }}</span>
+            </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+
+      <div style="margin-top: 2rem; font-size: 0.8rem; color: var(--text-dim);">
+        Note: You can select up to 10 seats per booking. Prices include entertainment taxes.
+      </div>
+
+    </div>
+
+    <!-- Right Sidebar Summary Card -->
+    <aside class="booking-summary-card">
+      <h3 class="summary-title">Booking Summary</h3>
+      
+      <div class="summary-movie-info">
+        <h4>{{ show.movie.title }}</h4>
+        <p>{{ show.format }} • {{ show.language }}</p>
+        <p>{{ show.screen.theatre.name }}</p>
+        <p>{{ show.date|date:"D, M d" }} | {{ show.start_time|time:"h:i A" }}</p>
+      </div>
+
+      <div style="margin-bottom: 0.5rem;">
+        <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">Selected Seats:</span>
+      </div>
+      <div class="selected-seats-chips" id="selectedSeatsChips">
+        <span class="text-dim" style="font-size: 0.85rem; color: #6b7280;">No seats selected yet. Click seats to select.</span>
+      </div>
+
+      <div style="margin: 1.5rem 0; border-top: 1px solid rgba(255, 255, 255, 0.07); padding-top: 1rem;">
+        <div class="price-breakdown-row">
+          <span>Tickets (<span id="selectedSeatsCount">0</span>)</span>
+          <span id="ticketSubtotal">₹0.00</span>
+        </div>
+        <div class="price-breakdown-row">
+          <span>Convenience Fee</span>
+          <span id="convenienceFee">₹0.00</span>
+        </div>
+        <div class="price-breakdown-total">
+          <span>Total Amount</span>
+          <span id="totalAmount" style="color: var(--primary-red);">₹0.00</span>
+        </div>
+      </div>
+
+      <!-- Form posting to Checkout view -->
+      <form action="{% url 'checkout' show_id=show.id %}" method="POST" id="seatSelectionForm">
+        {% csrf_token %}
+        <input type="hidden" name="seat_ids" id="hiddenSeatIds" value="">
+        
+        <button type="submit" 
+                class="btn btn-primary btn-lg" 
+                id="proceedCheckoutBtn" 
+                style="width: 100%;" 
+                disabled>
+          Proceed to Checkout
+        </button>
+      </form>
+
+      <p id="seatCountNotice" style="font-size: 0.78rem; text-align: center; color: var(--text-dim); margin-top: 0.8rem;">
+        Select seats on the map to begin.
+      </p>
+
+    </aside>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/seat_selection.js' %}"></script>
+{% endblock %}

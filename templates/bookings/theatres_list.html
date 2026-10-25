@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cinemas & Theatres | CineBook{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2rem; padding-bottom: 4rem;">
+
+  <div class="section-header">
+    <div>
+      <h1 class="section-title">Cinemas & Theatres</h1>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.2rem;">
+        Find premium IMAX, 4DX, and Dolby Atmos screens near you
+      </p>
+    </div>
+  </div>
+
+  <!-- City Filter Pills -->
+  <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
+    <a href="?city=All" class="filter-pill {% if selected_city == 'All' %}active{% endif %}">
+      All Cities
+    </a>
+    {% for c in cities %}
+      <a href="?city={{ c }}" class="filter-pill {% if selected_city == c %}active{% endif %}">
+        {{ c }}
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- Theatres Grid -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem;">
+    {% for theatre in theatres %}
+      <div class="theatre-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+            <span class="badge badge-red">{{ theatre.city }}</span>
+            <span class="badge badge-outline">{{ theatre.screens.count }} Screen{{ theatre.screens.count|pluralize }}</span>
+          </div>
+
+          <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: #fff;">{{ theatre.name }}</h3>
+          <p style="font-size: 0.85rem; color: var(--text-dim); line-height: 1.5; margin-bottom: 1rem;">
+            {{ theatre.address }}
+          </p>
+
+          <div style="margin-bottom: 1.25rem;">
+            <div style="font-size: 0.78rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700; margin-bottom: 0.4rem;">
+              Screens:
+            </div>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; color: var(--text-muted);">
+              {% for screen in theatre.screens.all %}
+                <li style="display: flex; align-items: center; gap: 0.4rem;">
+                  <span style="color: var(--primary-red);">&bull;</span>
+                  {{ screen.name }} ({{ screen.total_rows }} rows &times; {{ screen.seats_per_row }} seats)
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <div style="margin-bottom: 1.5rem;">
+            <div style="font-size: 0.78rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700; margin-bottom: 0.4rem;">
+              Experience & Amenities:
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
+              {% for f in theatre.facility_list %}
+                <span class="badge badge-outline" style="font-size: 0.72rem;">{{ f }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <a href="{% url 'home' %}?city={{ theatre.city }}" class="btn btn-primary btn-sm" style="width: 100%;">
+          View Shows in {{ theatre.city }}
+        </a>
+
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}
