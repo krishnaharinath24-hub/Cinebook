@@ -25,7 +25,7 @@ class Command(BaseCommand):
             }
         )
         if created_admin:
-            admin_user.set_password('admin1234')
+            admin_user.set_unusable_password()
             admin_user.save()
             self.stdout.write(self.style.SUCCESS("Created superuser: admin / admin1234"))
         else:
@@ -40,7 +40,7 @@ class Command(BaseCommand):
             }
         )
         if created_demo:
-            demo_user.set_password('demo1234')
+            demo_user.set_unusable_password()
             demo_user.save()
             self.stdout.write(self.style.SUCCESS("Created demo user: demouser / demo1234"))
         else:
