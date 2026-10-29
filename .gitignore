@@ -21,6 +21,7 @@ db.sqlite3
 
 # Uploaded media & logs
 media/
+staticfiles/
 *.log
 
 # IDE & OS files
